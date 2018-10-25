@@ -20,11 +20,11 @@ export class TableRowMeta extends EmberObject {
   _rowValue = null;
 
   /**
-    The map that contains cell meta information for this row. Is meant to be
-    unique to this row, which is why it is created here. In order to prevent
-    memory leaks, we need to be able to clean the cache manually when the row
-    is destroyed or updated, which is why we use a Map instead of WeakMap
-  */
+   The map that contains cell meta information for this row. Is meant to be
+   unique to this row, which is why it is created here. In order to prevent
+   memory leaks, we need to be able to clean the cache manually when the row
+   is destroyed or updated, which is why we use a Map instead of WeakMap
+   */
   _cellMetaCache = new Map();
   _isCollapsed = false;
 
@@ -75,7 +75,7 @@ export class TableRowMeta extends EmberObject {
     return selection.includes(rowValue) || get(this, '_parentMeta.isGroupSelected');
   }
 
-  @computed('_tree.{enableTree,enableCollapse}', '_rowValue.{children.[],disableCollapse}')
+  @computed('_tree.{enableTree,enableCollapse}', '_rowValue.children.[]')
   get canCollapse() {
     if (!get(this, '_tree.enableTree') || !get(this, '_tree.enableCollapse')) {
       return false;
@@ -83,9 +83,7 @@ export class TableRowMeta extends EmberObject {
 
     let children = get(this, '_rowValue.children');
 
-    return (
-      !get(this, '_rowValue.disableCollapse') && isArray(children) && get(children, 'length') > 0
-    );
+    return isArray(children) && get(children, 'length') > 0;
   }
 
   @computed('_parentMeta.depth')
@@ -93,6 +91,18 @@ export class TableRowMeta extends EmberObject {
     let parentMeta = get(this, '_parentMeta');
 
     return parentMeta ? get(parentMeta, 'depth') + 1 : 0;
+  }
+
+  @computed('_lastKnownIndex', '_prevSiblingMeta.index')
+  get index() {
+    let prevSiblingIndex = get(this, '_prevSiblingMeta.index');
+    let lastKnownIndex = get(this, '_lastKnownIndex');
+
+    if (lastKnownIndex === prevSiblingIndex) {
+      return lastKnownIndex + 1;
+    }
+
+    return lastKnownIndex;
   }
 
   @computed('_tree.length')
@@ -278,13 +288,13 @@ function setupRowMeta(tree, row, parentRow, node) {
 }
 
 /**
-  Given a list of ordered values and a target value, finds the index of
-  the closest value which does not exceed the target value
+ Given a list of ordered values and a target value, finds the index of
+ the closest value which does not exceed the target value
 
-  @param {Array<number>} values - the list of values
-  @param {number} target - the index to find the closest value to
-  @return {number} - the index of the value closest to the target
-*/
+ @param {Array<number>} values - the list of values
+ @param {number} target - the index to find the closest value to
+ @return {number} - the index of the value closest to the target
+ */
 function closestLessThan(values, target) {
   let low = 0;
   let high = values.length - 1;
@@ -306,8 +316,8 @@ function closestLessThan(values, target) {
 }
 
 /**
-  Single node of a CollapseTree
-*/
+ Single node of a CollapseTree
+ */
 class CollapseTreeNode extends EmberObject {
   _childNodes = null;
 
@@ -345,10 +355,10 @@ class CollapseTreeNode extends EmberObject {
   }
 
   /**
-    Fully destroys the child nodes in the event that they change or that this
-    node is destroyed. If children are not destroyed, they will leak memory due
-    to dangling references in Ember Meta.
-  */
+   Fully destroys the child nodes in the event that they change or that this
+   node is destroyed. If children are not destroyed, they will leak memory due
+   to dangling references in Ember Meta.
+   */
   cleanChildNodes() {
     if (this._childNodes) {
       for (let child of this._childNodes) {
@@ -361,14 +371,14 @@ class CollapseTreeNode extends EmberObject {
   }
 
   /**
-    Whether or not the node is leaf of the CollapseTree. A node is a leaf if
-    the wrapped value's children have no children. If so, there is no need to
-    create another level of nodes in the tree - true leaves of the passed in
-    value tree don't require any custom logic, so we can index directly into
-    the array of children in `objectAt`.
+   Whether or not the node is leaf of the CollapseTree. A node is a leaf if
+   the wrapped value's children have no children. If so, there is no need to
+   create another level of nodes in the tree - true leaves of the passed in
+   value tree don't require any custom logic, so we can index directly into
+   the array of children in `objectAt`.
 
-    @type boolean
-  */
+   @type boolean
+   */
   @computed('value.children.@each.children', 'isRoot', 'tree.enableTree')
   get isLeaf() {
     if (get(this, 'isRoot') && !get(this, 'tree.enableTree')) {
@@ -396,32 +406,32 @@ class CollapseTreeNode extends EmberObject {
   }
 
   /**
-    The children of this node, if they exist. Children can be other nodes, or
-    spans (arrays) of leaf value-nodes. For instance:
+   The children of this node, if they exist. Children can be other nodes, or
+   spans (arrays) of leaf value-nodes. For instance:
 
-    ```
-    A
-    └── B
-    ├── C
-    └── D
-        └── E
-    ```
+   ```
+   A
+   └── B
+   ├── C
+   └── D
+   └── E
+   ```
 
-    In this example, A would have the following children:
+   In this example, A would have the following children:
 
-    ```
-    children = [
-      [B, C],
-      Node(D)
-    ];
-    ```
+   ```
+   children = [
+   [B, C],
+   Node(D)
+   ];
+   ```
 
-    This allows us to do a binary search on the list of children without
-    creating a node for each span, arrays simply represent x-children in
-    a segment before a given node.
+   This allows us to do a binary search on the list of children without
+   creating a node for each span, arrays simply represent x-children in
+   a segment before a given node.
 
-    @type Array<Node|Array<object>>
-  */
+   @type Array<Node|Array<object>>
+   */
   @computed('sortedChildren.[]', 'isLeaf')
   get childNodes() {
     this.cleanChildNodes();
@@ -460,16 +470,16 @@ class CollapseTreeNode extends EmberObject {
   }
 
   /**
-    The length of the node. Branches in three directions:
+   The length of the node. Branches in three directions:
 
-    1. If the node is collapsed, then the length of the node is 1, the
-        node itself. This means that the parent node will only index into
-        this child if it is trying to get exactly the child node,
-        effectively hiding its children.
-    2. If the node is a leaf, then the length is the node itself plus the
-        length of its value-children.
-    3. Otherwise, the length is the sum of the lengths of its children.
-  */
+   1. If the node is collapsed, then the length of the node is 1, the
+   node itself. This means that the parent node will only index into
+   this child if it is trying to get exactly the child node,
+   effectively hiding its children.
+   2. If the node is a leaf, then the length is the node itself plus the
+   length of its value-children.
+   3. Otherwise, the length is the sum of the lengths of its children.
+   */
   @computed(
     'childNodes.[]',
     'sortedChildren.[]',
@@ -488,37 +498,37 @@ class CollapseTreeNode extends EmberObject {
   }
 
   /**
-    Calculates a list of the summation of offsets of children to run a binary
-    search against. Given:
+   Calculates a list of the summation of offsets of children to run a binary
+   search against. Given:
 
-    ```
-    A
-    ├── B
-    │   ├── C
-    │   └── D
-    ├── E(c)
-    │   ├── F
-    │   └── G
-    └── H
-    │   ├── I
-    │   └── J
-    │       └── K
-    └── L
-    └── M
-    ```
+   ```
+   A
+   ├── B
+   │   ├── C
+   │   └── D
+   ├── E(c)
+   │   ├── F
+   │   └── G
+   └── H
+   │   ├── I
+   │   └── J
+   │       └── K
+   └── L
+   └── M
+   ```
 
-    The offsetList for A would be: `[0, 3, 6, 10, 11]`. Each item in this
-    list is the offset of the corresponding child, or the summation of the
-    lengths of all children preceding it. It is effectively the starting
-    index of that child.
+   The offsetList for A would be: `[0, 3, 6, 10, 11]`. Each item in this
+   list is the offset of the corresponding child, or the summation of the
+   lengths of all children preceding it. It is effectively the starting
+   index of that child.
 
-    So, if I'm trying to find index 9 in A, which is item K (not counting A
-    itself), then I'm going to want to traverse down H, which is the 3rd child.
-    I run a binary search against these offsets, which are ordered, and find
-    the closest starting index which is strictly less than 9, which is the 3rd
-    index. I know I can then recurse down that node and I should eventually
-    find the item I'm after.
-  */
+   So, if I'm trying to find index 9 in A, which is item K (not counting A
+   itself), then I'm going to want to traverse down H, which is the 3rd child.
+   I run a binary search against these offsets, which are ordered, and find
+   the closest starting index which is strictly less than 9, which is the 3rd
+   index. I know I can then recurse down that node and I should eventually
+   find the item I'm after.
+   */
   @computed('length', 'isLeaf')
   get offsetList() {
     if (get(this, 'isLeaf')) {
@@ -537,24 +547,24 @@ class CollapseTreeNode extends EmberObject {
   }
 
   /**
-    Finds the object at the given index, where an index n is defined as the n-th
-    item visited during a depth first traversal of the tree. To do this, we either
+   Finds the object at the given index, where an index n is defined as the n-th
+   item visited during a depth first traversal of the tree. To do this, we either
 
-    1. Return the current node at index 0
-    2. If the node is a leaf, return the value child at the corresponding index
-    3. Otherwise, find the correct child to walk down to and call `objectAt` on it
-        with a normalized index
+   1. Return the current node at index 0
+   2. If the node is a leaf, return the value child at the corresponding index
+   3. Otherwise, find the correct child to walk down to and call `objectAt` on it
+   with a normalized index
 
-    `objectAt` also tracks the depth to pass back as meta information, something
-    that is useful for displaying the tree as a list. `index` and `depth` are
-    normalized as we traverse the tree, every time you "pass" a node you subtract
-    it from the index for the next `objectAt` call, and you add 1 to depth for
-    every `objectAt` call.
+   `objectAt` also tracks the depth to pass back as meta information, something
+   that is useful for displaying the tree as a list. `index` and `depth` are
+   normalized as we traverse the tree, every time you "pass" a node you subtract
+   it from the index for the next `objectAt` call, and you add 1 to depth for
+   every `objectAt` call.
 
-    @param {number} index - the index to find
-    @param {Array<object>} parents - the parents of the current node in the traversal
-    @return {{ value: object, parents: Array<object> }}
-  */
+   @param {number} index - the index to find
+   @param {Array<object>} parents - the parents of the current node in the traversal
+   @return {{ value: object, parents: Array<object> }}
+   */
   objectAt(index) {
     assert(
       'index must be gte than 0 and less than the length of the node',
@@ -597,60 +607,60 @@ class CollapseTreeNode extends EmberObject {
 }
 
 /**
-  The goal of the collapse tree is provide a data structure that:
+ The goal of the collapse tree is provide a data structure that:
 
-  1. Given an index n, can find the n-th node visited in a depth-first-walk
-      of the tree
-  2. Can "hide" or "collapse" nodes, so that their children are not walked
+ 1. Given an index n, can find the n-th node visited in a depth-first-walk
+ of the tree
+ 2. Can "hide" or "collapse" nodes, so that their children are not walked
 
-  So given a tree like this, where the (c) annotation means "isCollapsed":
+ So given a tree like this, where the (c) annotation means "isCollapsed":
 
-  ```
-  A
-  ├── B
-  │   ├── C
-  │   └── D
-  ├── E(c)
-  │   ├── F
-  │   └── G
-  └── H
-  │   ├── I
-  │   └── J
-  │       └── K
-  └── L
-  ```
+ ```
+ A
+ ├── B
+ │   ├── C
+ │   └── D
+ ├── E(c)
+ │   ├── F
+ │   └── G
+ └── H
+ │   ├── I
+ │   └── J
+ │       └── K
+ └── L
+ ```
 
-  `objectAt(0) === A`, `objectAt(2) === C`, `objectAt(4) === E`, and
-  `objectAt(5) === H`
+ `objectAt(0) === A`, `objectAt(2) === C`, `objectAt(4) === E`, and
+ `objectAt(5) === H`
 
-  We also want to wrap this structure around a pre-existing tree that is a much
-  simpler POJO with the shape:
+ We also want to wrap this structure around a pre-existing tree that is a much
+ simpler POJO with the shape:
 
-  ```json
-  {
+ ```json
+ {
     isCollapsed: false,
     children: [{
       isCollapsed: true,
       children: []
     }]
   }
-  ```
+ ```
 
-  This allows us to provide a simple API to users while being able to index into
-  their tree quickly and turn it into a list/table representation, without exposing
-  any internal implementation details.
+ This allows us to provide a simple API to users while being able to index into
+ their tree quickly and turn it into a list/table representation, without exposing
+ any internal implementation details.
 
-  To do this, each node in the tree has a `length` equal to the lengths of its
-  children, and we do a binary search of each layer of the tree to find the closest
-  node to the index. We traverse downward until we have the correct node, getting
-  there in O(log(n)) time at worst (where n is the average number of nodes in a layer).
+ To do this, each node in the tree has a `length` equal to the lengths of its
+ children, and we do a binary search of each layer of the tree to find the closest
+ node to the index. We traverse downward until we have the correct node, getting
+ there in O(log(n)) time at worst (where n is the average number of nodes in a layer).
 
-  Whenever a level of the tree changes (e.g. a node is added or removed) we must
-  rebuild the subtree for that level. In order to keep tree construction and
-  allocation costs low, we also do not create nodes for leaf children, since there is
-  no need - they are length 1 and have no children, so no custom. Our tree saves an
-  order of magnitude of space and allocation costs this way.
-*/
+ Whenever a level of the tree changes (e.g. a node is added or removed) we must
+ rebuild the subtree for that level. In order to keep tree construction and
+ allocation costs low, we also do not create nodes for leaf children, since there is
+ no need - they are length 1 and have no children, so no custom. Our tree saves an
+ order of magnitude of space and allocation costs this way.
+ */
 export default class CollapseTree extends EmberObject.extend(EmberArray) {
   constructor() {
     super(...arguments);
@@ -688,22 +698,32 @@ export default class CollapseTree extends EmberObject.extend(EmberArray) {
 
   /**
 
-    @param {number} index - the index to find
-    @return {{ value: object, parents: Array<object> }}
-  */
+   @param {number} index - the index to find
+   @return {{ value: object, parents: Array<object> }}
+   */
   objectAt(index) {
-    if (index >= get(this, 'length') || index < 0) {
+    let length = get(this, 'length');
+    if (index >= length || index < 0) {
       return undefined;
     }
 
+    let root = get(this, 'root');
+    let rowMetaCache = this.get('rowMetaCache');
+
     // We add a "fake" top level node to account for the root node
     let normalizedIndex = index + 1;
-    let result = get(this, 'root').objectAt(normalizedIndex);
-    let meta = this.get('rowMetaCache').get(result);
+    let result = root.objectAt(normalizedIndex);
+    let meta = rowMetaCache.get(result);
 
-    // Set the perceived index on the meta. It should be safe to do this here, since
-    // the row will always be retrieved via `objectAt` before being used.
-    set(meta, 'index', index);
+    // Set the last known index on the meta and link the next siblings meta
+    // so that its index can recompute in case it conflicts from shifting
+    set(meta, '_lastKnownIndex', index);
+
+    if (index < length - 1) {
+      let nextSibling = root.objectAt(normalizedIndex + 1);
+      let nextMeta = rowMetaCache.get(nextSibling);
+      set(nextMeta, '_prevSiblingMeta', meta);
+    }
 
     return result;
   }
@@ -717,10 +737,10 @@ export default class CollapseTree extends EmberObject.extend(EmberArray) {
   }
 
   /**
-    Normalized length of the tree
+   Normalized length of the tree
 
-    @type {number}
-  */
+   @type {number}
+   */
   @computed('root.length')
   get length() {
     // Remove the root level node from the length count
