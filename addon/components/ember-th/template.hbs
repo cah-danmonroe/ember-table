@@ -10,6 +10,10 @@
       {{sortIndex}}
     {{/if}}
   </span>
+{{else}}
+  {{#if isSortable}}
+    <span data-test-unsorted-indicator class="et-sort-indicator"></span>
+  {{/if}}
 {{/if}}
 
 {{#if isSortable}}
